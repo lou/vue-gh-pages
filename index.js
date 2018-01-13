@@ -46,17 +46,17 @@ async function copyCNAME () {
 async function editForProduction () {
     console.log('Preparing files for github pages');
 
-    await fs.readFile('docs/index.html', 'utf-8', async (err, data) => {
+    fs.readFile('docs/index.html', 'utf-8', async (err, data) => {
         if (err) throw err;
 
         var newValue = data.replace(/src=\//g, 'src=');
 
-        await fs.writeFile('docs/index.html', newValue, 'utf-8', async (err) => {
+        fs.writeFile('docs/index.html', newValue, 'utf-8', (err) => {
             if (err) throw err;
-            await fs.readFile('docs/index.html', 'utf-8', async (err, data) => {
+            fs.readFile('docs/index.html', 'utf-8', (err, data) => {
                 if (err) throw err;
                 var newValue2 = data.replace(/href=\//, 'href=');
-                await fs.writeFile('docs/index.html', newValue2, 'utf-8', async (err) => {
+                fs.writeFile('docs/index.html', newValue2, 'utf-8', (err) => {
                     if (err) {
                         console.error(err);
                     }
