@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-var ncp = require('ncp').ncp;
+var fsSync = require('fs-sync');
 var fs = require('fs');
 var execSync = require('child_process').execSync;
 var rimraf = require('rimraf');
@@ -26,7 +26,7 @@ async function pushToGhPages () {
 }
 
 async function copySync (file, destination) {
-    await ncp(file, destination, (err) => {
+    await fsSync.copy(file, destination, (err) => {
         if (err) {
             console.error(err);
         }
@@ -67,7 +67,6 @@ async function runBuild () {
     const packageManagerName = await checkIfYarn() ? 'yarn' : 'npm';
 
     execSync(`${packageManagerName} run build`);
-    ncp.limit = 16;
 
     copySync('dist', 'docs');
     console.log('Build Complete.');
