@@ -25,22 +25,13 @@ async function pushToGhPages () {
     });
 }
 
-async function copy404 () {
-    await ncp('404.html', 'docs/404.html', function (err) {
+async function copySync (file, destination) {
+    await ncp(file, destination, (err) => {
         if (err) {
             console.error(err);
         }
-    });
+    })
 }
-
-async function copyCNAME () {
-    await ncp('CNAME', 'docs/CNAME', function (err) {
-        if (err) {
-            console.error(err);
-        }
-    });
-}
-
 
 async function editForProduction () {
     console.log('Preparing files for github pages');
@@ -78,28 +69,20 @@ async function runBuild () {
     execSync(`${packageManagerName} run build`);
     ncp.limit = 16;
 
-    await ncp('dist', 'docs', async (err) => {
-        if (err) {
-            return console.error(err);
+    copySync('dist', 'docs');
+    console.log('Build Complete.');
+    const pathToBuild = 'dist';
+    await rimraf(pathToBuild, async () => {
+        if (fs.existsSync('CNAME')) {
+            await copySync('CNAME', 'docs/CNAME');
         }
-        console.log('Build Complete.');
-        const pathToBuild = 'dist';
-        await rimraf(pathToBuild, async () => {
-            if (err) {
-                console.error(err)
-            } else {
-                if (fs.existsSync('CNAME')) {
-                    await copyCNAME();
-                }
-                if (fs.existsSync('404.html')) {
-                    await copy404();
-                }
-                await editForProduction();
-                if (repository !== null) {
-                    pushToGhPages();
-                }
-            }
-        });
+        if (fs.existsSync('404.html')) {
+            await copySync('404.html', 'docs/404.html');
+        }
+        await editForProduction();
+        if (repository !== null) {
+            pushToGhPages();
+        }
     });
 }
 
