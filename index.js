@@ -61,7 +61,6 @@ function checkIfYarn () {
 }
 
 async function runBuild () {
-    // Create development build
     console.log('Creating production build...');
 
     const packageManagerName = await checkIfYarn() ? 'yarn' : 'npm';
