@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 var ncp = require('ncp').ncp;
 var fs = require('fs');
-var exec = require('child_process').exec;
+var execSync = require('child_process').execSync;
 var rimraf = require('rimraf');
 var ghpages = require('gh-pages');
 var path = require('path');
-var packageJson = require('../../package.json')
-var repository = packageJson['homepage'] || null
-var isWin = require('os').platform().indexOf('win') == 0;
+var packageJson = require('../../package.json');
+var repository = packageJson['homepage'] || null;
+var isWin = require('os').platform().indexOf('win') === 0;
 
-function pushToGhPages () {
-    ghpages.publish('docs', {
+async function pushToGhPages () {
+    await ghpages.publish('docs', {
         branch: 'master',
         dest: 'docs',
         repo: repository + '.git'
@@ -26,16 +26,16 @@ function pushToGhPages () {
     });
 }
 
-function copy404 () {
-    ncp('404.html', 'docs/404.html', function (err) {
+async function copy404 () {
+    await ncp('404.html', 'docs/404.html', function (err) {
         if (err) {
             console.error(err);
         }
     });
 }
 
-function copyCNAME () {
-    ncp('CNAME', 'docs/CNAME', function (err) {
+async function copyCNAME () {
+    await ncp('CNAME', 'docs/CNAME', function (err) {
         if (err) {
             console.error(err);
         }
@@ -43,26 +43,22 @@ function copyCNAME () {
 }
 
 
-function editForProduction () {
+async function editForProduction () {
     console.log('Preparing files for github pages');
 
-    fs.readFile('docs/index.html', 'utf-8', function (err, data) {
+    await fs.readFile('docs/index.html', 'utf-8', async (err, data) => {
         if (err) throw err;
 
         var newValue = data.replace(/src=\//g, 'src=');
 
-        fs.writeFile('docs/index.html', newValue, 'utf-8', function (err) {
+        await fs.writeFile('docs/index.html', newValue, 'utf-8', async (err) => {
             if (err) throw err;
-            fs.readFile('docs/index.html', 'utf-8', function (err, data) {
+            await fs.readFile('docs/index.html', 'utf-8', async (err, data) => {
                 if (err) throw err;
                 var newValue2 = data.replace(/href=\//, 'href=');
-                fs.writeFile('docs/index.html', newValue2, 'utf-8', function (err) {
+                await fs.writeFile('docs/index.html', newValue2, 'utf-8', async (err) => {
                     if (err) {
                         console.error(err);
-                    } else {
-                        if (repository !== null) {
-                            pushToGhPages();
-                        }
                     }
                 });
             });
@@ -74,49 +70,53 @@ function checkIfYarn () {
     return fs.existsSync(path.resolve('./' || process.cwd(), 'yarn.lock'));
 }
 
-function runBuild () {
+async function runBuild () {
     // Create development build
     console.log('Creating production build...');
 
-    const packageManagerName = checkIfYarn() ? 'yarn' : 'npm'
+    const packageManagerName = await checkIfYarn() ? 'yarn' : 'npm';
 
-    exec(`${packageManagerName} run build`, function () {
-        // Move the dist folder to docs for gh-pages
-        ncp.limit = 16;
+    execSync(`${packageManagerName} run build`);
+    ncp.limit = 16;
 
-        ncp('dist', 'docs', function (err) {
-            if (err) {
-                return console.error(err);
+    await ncp('dist', 'docs', async (err) => {
+        if (err) {
+            return console.error(err);
+        }
+        console.log('Build Complete.');
+        const pathToBuild = 'dist';
+        var removeDist = 'rm -r ' + pathToBuild;
+        if (isWin) {
+            removeDist = 'rd /s /q "' + pathToBuild + '"';
+        }
+        execSync(removeDist);
+        if (err) {
+            console.error(err)
+        } else {
+            if (fs.existsSync('CNAME')) {
+                await copyCNAME();
             }
-            console.log('Build Complete.');
-            const pathToBuild = 'dist';
-            var removeDist = 'rm -r ' + pathToBuild;
-            if (isWin) {
-                removeDist = 'rd /s /q "' + pathToBuild + '"';
+            if (fs.existsSync('404.html')) {
+                await copy404();
             }
-            exec(removeDist, function (err, stdout, stderr) {
-                if (err) {
-                    console.error(err)
-                } else {
-                    if (fs.existsSync('CNAME')) {
-                        copyCNAME()
-                    }
-                    if (fs.existsSync('404.html')) {
-                        copy404()
-                    }
-                    editForProduction()
-                }
-            });
-        });
-    }).stderr.pipe(process.stderr);
-}
-
-if (fs.existsSync('docs')) {
-    var pathToDocs = 'docs';
-
-    rimraf(pathToDocs, function () {
-        runBuild();
+            await editForProduction();
+            if (repository !== null) {
+                pushToGhPages();
+            }
+        }
     });
-} else {
-    runBuild();
 }
+
+async function removeDocsFolder () {
+    if (fs.existsSync('docs')) {
+        var pathToDocs = 'docs';
+        await rimraf(pathToDocs, () => { return 0; });
+    }
+}
+
+async function main () {
+    await removeDocsFolder();
+    await runBuild();
+}
+
+main();
