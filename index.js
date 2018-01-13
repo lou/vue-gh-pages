@@ -107,16 +107,19 @@ async function runBuild () {
     });
 }
 
-async function removeDocsFolder () {
+async function createProductionBuild () {
     if (fs.existsSync('docs')) {
         var pathToDocs = 'docs';
-        await rimraf(pathToDocs, () => { return 0; });
+        await rimraf(pathToDocs, () => {
+            runBuild();
+        });
+    } else {
+        runBuild();
     }
 }
 
 async function main () {
-    await removeDocsFolder();
-    await runBuild();
+    await createProductionBuild();
 }
 
 main();
