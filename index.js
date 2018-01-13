@@ -7,7 +7,6 @@ var ghpages = require('gh-pages');
 var path = require('path');
 var packageJson = require('../../package.json');
 var repository = packageJson['homepage'] || null;
-var isWin = require('os').platform().indexOf('win') === 0;
 
 async function pushToGhPages () {
     await ghpages.publish('docs', {
@@ -85,25 +84,22 @@ async function runBuild () {
         }
         console.log('Build Complete.');
         const pathToBuild = 'dist';
-        var removeDist = 'rm -r ' + pathToBuild;
-        if (isWin) {
-            removeDist = 'rd /s /q "' + pathToBuild + '"';
-        }
-        execSync(removeDist);
-        if (err) {
-            console.error(err)
-        } else {
-            if (fs.existsSync('CNAME')) {
-                await copyCNAME();
+        await rimraf(pathToBuild, async () => {
+            if (err) {
+                console.error(err)
+            } else {
+                if (fs.existsSync('CNAME')) {
+                    await copyCNAME();
+                }
+                if (fs.existsSync('404.html')) {
+                    await copy404();
+                }
+                await editForProduction();
+                if (repository !== null) {
+                    pushToGhPages();
+                }
             }
-            if (fs.existsSync('404.html')) {
-                await copy404();
-            }
-            await editForProduction();
-            if (repository !== null) {
-                pushToGhPages();
-            }
-        }
+        });
     });
 }
 
