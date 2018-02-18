@@ -12,7 +12,8 @@ function pushToGhPages () {
     ghpages.publish('docs', {
         branch: 'master',
         dest: 'docs',
-        repo: repository + '.git'
+        repo: repository + '.git',
+        message: 'Deploy Github Pages'
     },
     function (err) {
         if (err) {
